@@ -1,0 +1,11 @@
+frontend.enableClientVersionCheck:
+  - value: false
+    constraints: {}
+
+frontend.enableClientVersionCheck:
+  - value: false
+    constraints: {}
+
+frontend.enableClientVersionCheck:
+  - value: false
+    constraints: {}

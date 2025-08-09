@@ -1,0 +1,46 @@
+# Temporal dynamic configuration for development with PostgreSQL
+# This file configures Temporal to use PostgreSQL as the persistence store
+
+# Disable client version check for development
+frontend.enableClientVersionCheck:
+  - value: false
+    constraints: {}
+
+# Enable SQL persistence
+persistence.enableSQL:
+  - value: true
+    constraints: {}
+
+# Configure SQL store
+persistence.sql:
+  - value:
+      pluginName: 'postgres'
+      databaseName: 'orderflow'
+      connectAddr: 'postgres:5432'
+      connectProtocol: 'tcp'
+      user: 'orderflow'
+      password: 'orderflow123'
+      maxConns: 20
+      maxIdleConns: 20
+      maxConnLifetime: '1h'
+    constraints: {}
+
+# Enable visibility
+persistence.enableVisibility:
+  - value: true
+    constraints: {}
+
+# Configure visibility store
+persistence.visibilityStore:
+  - value: 'sql'
+    constraints: {}
+
+# Enable advanced visibility features
+persistence.enableAdvancedVisibility:
+  - value: true
+    constraints: {}
+
+# Configure advanced visibility store
+persistence.advancedVisibilityStore:
+  - value: 'sql'
+    constraints: {}

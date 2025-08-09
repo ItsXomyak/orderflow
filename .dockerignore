@@ -1,0 +1,58 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+README.md
+*.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+
+# Build artifacts
+bin/
+dist/
+build/
+
+# Test files
+*_test.go
+test/
+tests/
+
+# Coverage
+coverage.out
+coverage.html
+
+# Go specific
+vendor/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Temporal config (will be mounted)
+temporal-config/
+
+# Migrations (will be mounted)
+migrations/
