@@ -11,7 +11,7 @@ type InsufficientStockError struct {
 }
 
 func (e *InsufficientStockError) Error() string {
-	return fmt.Sprintf("insufficient stock for product %s: requested %d, available %d", 
+	return fmt.Sprintf("insufficient stock for product %s: requested %d, available %d",
 		e.ProductID, e.RequestedQuantity, e.AvailableQuantity)
 }
 

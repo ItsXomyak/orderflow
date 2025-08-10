@@ -1,9 +1,7 @@
-// internal/domain/order/errors.go
 package order
 
 import "fmt"
 
-// ValidationError ошибка валидации заказа
 type ValidationError struct {
 	Message string
 }
@@ -16,7 +14,6 @@ func NewValidationError(message string) *ValidationError {
 	return &ValidationError{Message: message}
 }
 
-// NotFoundError ошибка, когда заказ не найден
 type NotFoundError struct {
 	OrderID string
 }
@@ -29,7 +26,6 @@ func NewNotFoundError(orderID string) *NotFoundError {
 	return &NotFoundError{OrderID: orderID}
 }
 
-// CannotCancelError ошибка, когда заказ нельзя отменить
 type CannotCancelError struct {
 	Status Status
 }
@@ -42,7 +38,6 @@ func NewCannotCancelError(status Status) *CannotCancelError {
 	return &CannotCancelError{Status: status}
 }
 
-// StatusTransitionError ошибка неправильного перехода статуса
 type StatusTransitionError struct {
 	FromStatus Status
 	ToStatus   Status

@@ -4,7 +4,6 @@ import (
 	"time"
 )
 
-// Status представляет статус заказа
 type Status string
 
 const (
@@ -16,7 +15,6 @@ const (
 	StatusCancelled  Status = "cancelled"
 )
 
-// Order представляет основную бизнес-сущность заказа
 type Order struct {
 	ID          string    `json:"id"`
 	CustomerID  string    `json:"customer_id"`
@@ -25,14 +23,12 @@ type Order struct {
 	Status      Status    `json:"status"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
-	
-	// Дополнительные поля для трекинга процесса
-	PaymentID      string     `json:"payment_id,omitempty"`
-	FailureReason  string     `json:"failure_reason,omitempty"`
-	CompletedAt    *time.Time `json:"completed_at,omitempty"`
+
+	PaymentID     string     `json:"payment_id,omitempty"`
+	FailureReason string     `json:"failure_reason,omitempty"`
+	CompletedAt   *time.Time `json:"completed_at,omitempty"`
 }
 
-// Item представляет элемент заказа
 type Item struct {
 	ProductID string  `json:"product_id"`
 	Name      string  `json:"name"`
@@ -40,13 +36,11 @@ type Item struct {
 	Price     float64 `json:"price"`
 }
 
-// CreateRequest запрос на создание заказа
 type CreateRequest struct {
 	CustomerID string `json:"customer_id"`
 	Items      []Item `json:"items"`
 }
 
-// NewOrder создает новый заказ
 func NewOrder(customerID string, items []Item) *Order {
 	order := &Order{
 		CustomerID: customerID,
@@ -59,47 +53,40 @@ func NewOrder(customerID string, items []Item) *Order {
 	return order
 }
 
-// IsCompleted проверяет, завершен ли заказ
 func (o *Order) IsCompleted() bool {
 	return o.Status == StatusCompleted
 }
 
-// IsFailed проверяет, провален ли заказ
 func (o *Order) IsFailed() bool {
 	return o.Status == StatusFailed
 }
 
-// IsCancelled проверяет, отменен ли заказ
 func (o *Order) IsCancelled() bool {
 	return o.Status == StatusCancelled
 }
 
-// CanBeCancelled проверяет, можно ли отменить заказ
 func (o *Order) CanBeCancelled() bool {
-	return o.Status == StatusPending || 
-		   o.Status == StatusValidating || 
-		   o.Status == StatusPayment
+	return o.Status == StatusPending ||
+		o.Status == StatusValidating ||
+		o.Status == StatusPayment
 }
 
-// UpdateStatus обновляет статус заказа
 func (o *Order) UpdateStatus(status Status) {
 	o.Status = status
 	o.UpdatedAt = time.Now()
-	
+
 	if status == StatusCompleted {
 		now := time.Now()
 		o.CompletedAt = &now
 	}
 }
 
-// SetFailure устанавливает статус провала с причиной
 func (o *Order) SetFailure(reason string) {
 	o.Status = StatusFailed
 	o.FailureReason = reason
 	o.UpdatedAt = time.Now()
 }
 
-// Cancel отменяет заказ
 func (o *Order) Cancel() error {
 	if !o.CanBeCancelled() {
 		return NewCannotCancelError(o.Status)
@@ -109,7 +96,6 @@ func (o *Order) Cancel() error {
 	return nil
 }
 
-// CalculateTotal вычисляет общую сумму заказа
 func (o *Order) CalculateTotal() float64 {
 	total := 0.0
 	for _, item := range o.Items {
@@ -119,16 +105,15 @@ func (o *Order) CalculateTotal() float64 {
 	return total
 }
 
-// Validate валидирует заказ
 func (o *Order) Validate() error {
 	if o.CustomerID == "" {
 		return NewValidationError("customer_id is required")
 	}
-	
+
 	if len(o.Items) == 0 {
 		return NewValidationError("order must have at least one item")
 	}
-	
+
 	for _, item := range o.Items {
 		if item.ProductID == "" {
 			return NewValidationError("product_id is required for all items")
@@ -140,6 +125,6 @@ func (o *Order) Validate() error {
 			return NewValidationError("price cannot be negative")
 		}
 	}
-	
+
 	return nil
 }
