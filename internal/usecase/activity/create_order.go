@@ -1,11 +1,14 @@
+// internal/app/activity/create_order.go
 package activity
 
 import (
 	"context"
 	"time"
 
+	"go.temporal.io/sdk/temporal"
+
 	"orderflow/internal/domain/order"
-	"orderflow/internal/domain/workflow"
+	wf "orderflow/internal/domain/workflow"
 	"orderflow/pkg/logger"
 )
 
@@ -13,70 +16,48 @@ type CreateOrderActivity struct {
 	orderService order.Service
 }
 
-func NewCreateOrderActivity(orderService order.Service) *CreateOrderActivity {
-	return &CreateOrderActivity{orderService: orderService}
+func NewCreateOrderActivity(svc order.Service) *CreateOrderActivity {
+	return &CreateOrderActivity{orderService: svc}
 }
 
-func (a *CreateOrderActivity) Execute(ctx context.Context, input *workflow.CreateOrderActivityInput) (*workflow.CreateOrderActivityOutput, error) {
-	logger.Info("Starting CreateOrderActivity", "customer_id", input.CustomerID)
-
-	if err := input.Validate(); err != nil {
-		logger.Error("CreateOrderActivity validation error", "error", err)
-		return nil, workflow.NewActivityError(
-			workflow.CreateOrderActivity,
-			workflow.StepCreateOrder,
-			workflow.ErrorCodeValidation,
-			err.Error(),
-			false, // не ретраить в таком случае
-		)
+func (a *CreateOrderActivity) Execute(ctx context.Context, in *wf.CreateOrderActivityInput) (*wf.CreateOrderActivityOutput, error) {
+	if in == nil {
+		return nil, temporal.NewNonRetryableApplicationError("nil input", wf.ErrorCodeValidation, nil)
 	}
 
-
-	// симуляция процесса создания заказа
+	logger.Info("CreateOrderActivity: start", "customer_id", in.CustomerID)
+	if v, ok := any(in).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return nil, temporal.NewNonRetryableApplicationError(err.Error(), wf.ErrorCodeValidation, nil)
+		}
+	} else {
+		if in.CustomerID == "" || len(in.Items) == 0 {
+			return nil, temporal.NewNonRetryableApplicationError("customer_id and items are required", wf.ErrorCodeValidation, nil)
+		}
+	}
 	select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(workflow.OrderCreationDuration):
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-time.After(wf.OrderCreationDuration):
+	}
+
+	req := &order.CreateRequest{
+		CustomerID: in.CustomerID,
+		Items:      in.Items, // <- должен быть []order.Item
+	}
+
+	o, err := a.orderService.Create(ctx, req)
+	if err != nil {
+		if _, ok := err.(*order.ValidationError); ok {
+			return nil, temporal.NewNonRetryableApplicationError(err.Error(), wf.ErrorCodeValidation, nil)
 		}
+		return nil, temporal.NewApplicationError(err.Error(), wf.ErrorCodeInternalError)
+	}
 
-
-		// запрос на заказ
-		createReq := &order.CreateRequest{
-			CustomerID: input.CustomerID,
-			Items:      input.Items,
-		}
-
-		// создаем заказ через сервис
-		newOrder, err := a.orderService.Create(ctx, createReq)
-		if err != nil {
-			logger.Error("Failed to create order", "error", err)
-
-			// чекаем можно ли повторить операцию
-			retryable := true
-			errorCode:= workflow.ErrorCodeInternalError
-
-			switch err.(type) {
-			case *order.ValidationError:
-				retryable = false
-				errorCode = workflow.ErrorCodeInternalError
-			}
-
-			return nil, workflow.NewActivityError(
-				workflow.CreateOrderActivity,
-				workflow.StepCreateOrder,
-				errorCode,
-				err.Error(),
-				retryable,
-			)
-		}
-
-		logger.Info("Order created successfully", "order_id", newOrder.ID)
-
-		return &workflow.CreateOrderActivityOutput{
-			OrderID: newOrder.ID,
-		}, nil	
+	logger.Info("CreateOrderActivity: success", "order_id", o.ID)
+	return &wf.CreateOrderActivityOutput{OrderID: o.ID}, nil
 }
 
 func (a *CreateOrderActivity) GetActivityName() string {
-	return workflow.CreateOrderActivity
+	return wf.CreateOrderActivity
 }
