@@ -1,4 +1,3 @@
-// internal/usecase/activity/cancel_order.go
 package activity
 
 import (
@@ -36,7 +35,6 @@ func NewCancelOrderActivity(
 	}
 }
 
-// фукнция отмена заказа
 func (a *CancelOrderActivity) Execute(ctx context.Context, input *CancelOrderActivityInput) error {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Starting CancelOrderActivity", 
@@ -44,7 +42,6 @@ func (a *CancelOrderActivity) Execute(ctx context.Context, input *CancelOrderAct
 		"customer_id", input.CustomerID,
 		"reason", input.Reason)
 
-	// валидация входных данных
 	if input.OrderID == "" {
 		return workflow.NewActivityError(
 			workflow.CancelOrderActivity,
@@ -55,7 +52,6 @@ func (a *CancelOrderActivity) Execute(ctx context.Context, input *CancelOrderAct
 		)
 	}
 
-	// получить заказ
 	orderEntity, err := a.orderService.GetByID(ctx, input.OrderID)
 	if err != nil {
 		logger.Error("Failed to get order", "error", err)
@@ -74,7 +70,6 @@ func (a *CancelOrderActivity) Execute(ctx context.Context, input *CancelOrderAct
 		)
 	}
 
-	// чек, можно ли отменить заказ
 	if !orderEntity.CanBeCancelled() {
 		logger.Warn("Cannot cancel order", "order_status", orderEntity.Status)
 		return workflow.NewActivityError(
@@ -86,9 +81,7 @@ func (a *CancelOrderActivity) Execute(ctx context.Context, input *CancelOrderAct
 		)
 	}
 
-	// шаги отмены заказа (в обратном порядке выполнения)
 	
-	// возврат средств (если платеж был произведен)
 	if orderEntity.PaymentID != "" {
 		logger.Info("Refunding payment", "payment_id", orderEntity.PaymentID)
 		
@@ -99,19 +92,15 @@ func (a *CancelOrderActivity) Execute(ctx context.Context, input *CancelOrderAct
 		
 		if err := a.paymentService.RefundPayment(ctx, refundReq); err != nil {
 			logger.Error("Failed to refund payment", "error", err, "payment_id", orderEntity.PaymentID)
-			// не останавливаем процесс отмены из-за ошибки возврата - логируем для ручной обработки
-			// в прода нужно реализовать очередь для повторных попыток возврата
 		}
 	}
 
-	// освобождение резервирования товаров
 	logger.Info("Releasing inventory reservation", "order_id", input.OrderID)
 	
 	if err := a.inventoryService.ReleaseReservation(ctx, input.OrderID); err != nil {
 		logger.Error("Failed to release inventory reservation", "error", err)
 	}
 
-	// апдейт статуса заказа
 	logger.Info("Updating order status to cancelled", "order_id", input.OrderID)
 	
 	if err := a.orderService.Cancel(ctx, input.OrderID); err != nil {

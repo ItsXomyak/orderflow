@@ -2,14 +2,18 @@ package inventory
 
 import (
 	"context"
-
-	"orderflow/internal/domain/order"
 )
 
 type ReservationID string
 
 type Repository interface {
-	CheckAndReserve(ctx context.Context, items []order.Item, orderID order.Order) (ReservationID, error) // проверить это место
-	Release(ctx context.Context, reservationID ReservationID) error
-	Commit(ctx context.Context, reservationID ReservationID) error
+	CreateProduct(ctx context.Context, product *Product) error
+	GetProduct(ctx context.Context, productID string) (*Product, error)
+	UpdateProduct(ctx context.Context, product *Product) error
+	GetProducts(ctx context.Context) ([]*Product, error)
+	
+	CreateReservation(ctx context.Context, reservation *Reservation) error
+	GetReservationByOrderID(ctx context.Context, orderID string) (*Reservation, error)
+	DeleteReservation(ctx context.Context, orderID string) error
+	GetExpiredReservations(ctx context.Context) ([]*Reservation, error)
 }

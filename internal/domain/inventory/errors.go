@@ -1,9 +1,19 @@
-// internal/domain/inventory/errors.go
 package inventory
 
 import "fmt"
 
-// InsufficientStockError ошибка недостаточного количества товара
+type ValidationError struct {
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return fmt.Sprintf("inventory validation error: %s", e.Message)
+}
+
+func NewValidationError(message string) *ValidationError {
+	return &ValidationError{Message: message}
+}
+
 type InsufficientStockError struct {
 	ProductID         string
 	RequestedQuantity int
@@ -23,7 +33,6 @@ func NewInsufficientStockError(productID string, requested, available int) *Insu
 	}
 }
 
-// ProductNotFoundError ошибка, когда товар не найден
 type ProductNotFoundError struct {
 	ProductID string
 }
@@ -36,7 +45,6 @@ func NewProductNotFoundError(productID string) *ProductNotFoundError {
 	return &ProductNotFoundError{ProductID: productID}
 }
 
-// ReservationNotFoundError ошибка, когда резервирование не найдено
 type ReservationNotFoundError struct {
 	OrderID string
 }
@@ -49,7 +57,6 @@ func NewReservationNotFoundError(orderID string) *ReservationNotFoundError {
 	return &ReservationNotFoundError{OrderID: orderID}
 }
 
-// ReservationExpiredError ошибка истекшего резервирования
 type ReservationExpiredError struct {
 	ReservationID string
 }

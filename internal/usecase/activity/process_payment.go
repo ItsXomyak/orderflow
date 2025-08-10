@@ -35,20 +35,16 @@ func (a *ProcessPaymentActivity) Execute(ctx context.Context, input *workflow.Pr
 		)
 	}
 
-	// апдейт статус заказаз
 	if err := a.orderService.UpdateStatus(ctx, input.OrderID, order.StatusPayment); err != nil {
 		logger.Error("Failed to update order status", "error", err)
-		// продолжаем выполнение
 	}
 
-	// симуляция времени обработки платежа
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	case <-time.After(workflow.PaymentProcessDuration):
 	}
 
-	// сборка запроса на платеж
 	paymentReq := &payment.Request{
 		OrderID:   input.OrderID,
 		CustomerID: input.CustomerID,
@@ -57,7 +53,6 @@ func (a *ProcessPaymentActivity) Execute(ctx context.Context, input *workflow.Pr
 		PaymentMethod: "card", // если нужно то расширить, пока дефолт
 	}
 
-	// двухуровневая проверка ошибок платежа
 	paymentResp, err := a.paymenyService.ProcessPayment(ctx, paymentReq)
 	if err != nil {
 		logger.Error("Failed to process payment", "error", err)
@@ -87,16 +82,13 @@ func (a *ProcessPaymentActivity) Execute(ctx context.Context, input *workflow.Pr
 		)
 	}
 
-	// чек успешность платежа
 	if !paymentResp.Success {
 		logger.Error("Payment was not successful", "error_code", paymentResp.ErrorCode, "error_message", paymentResp.ErrorMessage)
 		
-		// освобождаем резервирование
 		if releaseErr := a.inventoryService.ReleaseReservation(ctx, input.OrderID); releaseErr != nil {
 			logger.Error("Failed to release reservation after payment failure", "error", releaseErr)
 		}
 		
-		// апдейт статус заказа
 		a.orderService.SetFailure(ctx, input.OrderID, paymentResp.ErrorMessage)
 		
 		return nil, workflow.NewActivityError(
@@ -108,12 +100,9 @@ func (a *ProcessPaymentActivity) Execute(ctx context.Context, input *workflow.Pr
 		)
 	}
 
-	// подтверждаем резервирование (переводим в продажу)
 	if err := a.inventoryService.ConfirmReservation(ctx, input.OrderID); err != nil {
 		logger.Error("Failed to confirm reservation", "error", err)
 		
-		// деньги списаны, но товар не зарезервирован, плохо
-		// пока оставить простой механизм компенсаций
 		return nil, workflow.NewActivityError(
 			workflow.ProcessPaymentActivity,
 			workflow.StepProcessPayment,

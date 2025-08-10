@@ -1,9 +1,7 @@
-// internal/domain/payment/errors.go
 package payment
 
 import "fmt"
 
-// ValidationError ошибка валидации платежа
 type ValidationError struct {
 	Message string
 }
@@ -16,7 +14,6 @@ func NewValidationError(message string) *ValidationError {
 	return &ValidationError{Message: message}
 }
 
-// NotFoundError ошибка, когда платеж не найден
 type NotFoundError struct {
 	PaymentID string
 }
@@ -29,7 +26,6 @@ func NewNotFoundError(paymentID string) *NotFoundError {
 	return &NotFoundError{PaymentID: paymentID}
 }
 
-// ProcessingError ошибка обработки платежа
 type ProcessingError struct {
 	Code    string
 	Message string
@@ -43,7 +39,6 @@ func NewProcessingError(code, message string) *ProcessingError {
 	return &ProcessingError{Code: code, Message: message}
 }
 
-// InsufficientFundsError ошибка недостаточных средств
 type InsufficientFundsError struct {
 	Amount float64
 }
@@ -56,7 +51,6 @@ func NewInsufficientFundsError(amount float64) *InsufficientFundsError {
 	return &InsufficientFundsError{Amount: amount}
 }
 
-// CannotRefundError ошибка, когда платеж нельзя вернуть
 type CannotRefundError struct {
 	PaymentID string
 	Status    Status
@@ -68,4 +62,42 @@ func (e *CannotRefundError) Error() string {
 
 func NewCannotRefundError(paymentID string, status Status) *CannotRefundError {
 	return &CannotRefundError{PaymentID: paymentID, Status: status}
+}
+
+type DuplicatePaymentError struct {
+	OrderID string
+}
+
+func (e *DuplicatePaymentError) Error() string {
+	return fmt.Sprintf("duplicate payment for order: %s", e.OrderID)
+}
+
+func NewDuplicatePaymentError(orderID string) *DuplicatePaymentError {
+	return &DuplicatePaymentError{OrderID: orderID}
+}
+
+type CannotCancelError struct {
+	PaymentID string
+	Status    Status
+}
+
+func (e *CannotCancelError) Error() string {
+	return fmt.Sprintf("cannot cancel payment %s with status: %s", e.PaymentID, e.Status)
+}
+
+func NewCannotCancelError(paymentID string, status Status) *CannotCancelError {
+	return &CannotCancelError{PaymentID: paymentID, Status: status}
+}
+
+type RefundFailedError struct {
+	PaymentID string
+	Reason    string
+}
+
+func (e *RefundFailedError) Error() string {
+	return fmt.Sprintf("refund failed for payment %s: %s", e.PaymentID, e.Reason)
+}
+
+func NewRefundFailedError(paymentID, reason string) *RefundFailedError {
+	return &RefundFailedError{PaymentID: paymentID, Reason: reason}
 }

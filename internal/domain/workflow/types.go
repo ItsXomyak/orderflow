@@ -1,4 +1,3 @@
-// internal/domain/workflow/types.go
 package workflow
 
 import (
@@ -7,18 +6,15 @@ import (
 	"orderflow/internal/domain/order"
 )
 
-// OrderProcessingInput входные данные для workflow обработки заказа
 type OrderProcessingInput struct {
 	CustomerID string       `json:"customer_id"`
 	Items      []order.Item `json:"items"`
 }
 
-// ActivityInput базовый интерфейс для входных данных Activity
 type ActivityInput interface {
 	Validate() error
 }
 
-// CreateOrderActivityInput входные данные для Activity создания заказа
 type CreateOrderActivityInput struct {
 	CustomerID string       `json:"customer_id"`
 	Items      []order.Item `json:"items"`
@@ -34,12 +30,10 @@ func (i *CreateOrderActivityInput) Validate() error {
 	return nil
 }
 
-// CreateOrderActivityOutput результат Activity создания заказа
 type CreateOrderActivityOutput struct {
 	OrderID string `json:"order_id"`
 }
 
-// CheckInventoryActivityInput входные данные для Activity проверки склада
 type CheckInventoryActivityInput struct {
 	OrderID string       `json:"order_id"`
 	Items   []order.Item `json:"items"`
@@ -52,13 +46,11 @@ func (i *CheckInventoryActivityInput) Validate() error {
 	return nil
 }
 
-// CheckInventoryActivityOutput результат Activity проверки склада
 type CheckInventoryActivityOutput struct {
 	Available        bool                            `json:"available"`
 	UnavailableItems []inventory.UnavailableItem     `json:"unavailable_items,omitempty"`
 }
 
-// ProcessPaymentActivityInput входные данные для Activity обработки платежа
 type ProcessPaymentActivityInput struct {
 	OrderID    string  `json:"order_id"`
 	CustomerID string  `json:"customer_id"`
@@ -79,13 +71,11 @@ func (i *ProcessPaymentActivityInput) Validate() error {
 	return nil
 }
 
-// ProcessPaymentActivityOutput результат Activity обработки платежа
 type ProcessPaymentActivityOutput struct {
 	PaymentID     string `json:"payment_id"`
 	TransactionID string `json:"transaction_id"`
 }
 
-// SendNotificationActivityInput входные данные для Activity отправки уведомления
 type SendNotificationActivityInput struct {
 	CustomerID string               `json:"customer_id"`
 	OrderID    string               `json:"order_id"`
@@ -104,14 +94,12 @@ func (i *SendNotificationActivityInput) Validate() error {
 	return nil
 }
 
-// ActivityResult общий результат выполнения Activity
 type ActivityResult struct {
 	Success bool        `json:"success"`
 	Message string      `json:"message,omitempty"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
-// WorkflowResult результат выполнения workflow
 type WorkflowResult struct {
 	OrderID   string      `json:"order_id"`
 	Status    order.Status `json:"status"`

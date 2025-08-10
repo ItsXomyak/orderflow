@@ -1,4 +1,3 @@
-// internal/app/activity/create_order.go
 package activity
 
 import (

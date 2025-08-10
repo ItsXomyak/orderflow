@@ -154,7 +154,6 @@ func OrderProcessingWorkflow(ctx workflow.Context, input *workflowDomain.OrderPr
 
 	var processPaymentOutput *workflowDomain.ProcessPaymentActivityOutput
 
-	// проверяем сигнал отмены
 	selector = workflow.NewSelector(ctx)
 	selector.AddReceive(cancelChannel, func(c workflow.ReceiveChannel, more bool) {
 		var signal string

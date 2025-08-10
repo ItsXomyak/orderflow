@@ -1,59 +1,57 @@
 version: '3.8'
 
 services:
+  # PostgreSQL
   postgres:
-    image: postgres:16
-    container_name: temporal_postgres
-    env_file:
-      - .env
+    image: postgres:15-alpine
+    container_name: orderflow-postgres
+    environment:
+      POSTGRES_DB: orderflow
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - '5432:5432'
     volumes:
-      - pgdata:/var/lib/postgresql/data
-    restart: unless-stopped
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./migrations/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d orderflow']
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # Temporal Server
   temporal:
-    image: temporalio/server:latest
-    container_name: temporal_server
-    env_file:
-      - .env
+    image: temporalio/auto-setup:1.22.3
+    container_name: orderflow-temporal
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=password
+      - POSTGRES_SEEDS=postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+    ports:
+      - '7233:7233'
     depends_on:
       postgres:
         condition: service_healthy
-    ports:
-      - "${TEMPORAL_ADDRESS}:7233"
-    environment:
-      - DB=${TEMPORAL_DB}
-      - DB_PORT=${TEMPORAL_DB_PORT}
-      - POSTGRES_USER=${TEMPORAL_USER}
-      - POSTGRES_PWD=${TEMPORAL_PASSWORD}
-      - DBNAME=${TEMPORAL_DBNAME}
-      - VISIBILITY_DBNAME=${TEMPORAL_VISIBILITY_DBNAME}
-      - POSTGRES_VISIBILITY_USER=${TEMPORAL_VISIBILITY_USER}
-      - POSTGRES_VISIBILITY_PWD=${TEMPORAL_VISIBILITY_PASSWORD}
-      - TEMPORAL_ADDRESS=${TEMPORAL_GRPC_ADDRESS}
     volumes:
-      - ./temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
-    restart: unless-stopped
+      - temporal_data:/var/lib/temporal
 
-  temporal-ui:
-    image: temporalio/ui:latest
-    container_name: temporal_ui
-    env_file:
-      - .env
+  # Temporal Web UI (опционально)
+  temporal-web:
+    image: temporalio/web:1.15.0
+    container_name: orderflow-temporal-web
+    environment:
+      - TEMPORAL_GRPC_ENDPOINT=temporal:7233
+      - TEMPORAL_PERMIT_WRITE_API=true
+    ports:
+      - '8088:8088'
     depends_on:
       - temporal
-    ports:
-      - "${TEMPORAL_UI_PORT}:8080"
-    environment:
-      - TEMPORAL_ADDRESS=${TEMPORAL_GRPC_ADDRESS}
-      - TEMPORAL_UI_ENABLED=${TEMPORAL_UI_ENABLED}
-    restart: unless-stopped
 
 volumes:
-  pgdata:
+  postgres_data:
+  temporal_data:

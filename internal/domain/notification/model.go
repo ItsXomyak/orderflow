@@ -11,7 +11,6 @@ const (
 	TypePaymentFailed  Type = "payment_failed"
 )
 
-// Channel канал доставки уведомления
 type Channel string
 
 const (
@@ -20,7 +19,6 @@ const (
 	ChannelPush  Channel = "push"
 )
 
-// Status статус уведомления
 type Status string
 
 const (
@@ -29,7 +27,6 @@ const (
 	StatusFailed  Status = "failed"
 )
 
-// Notification представляет уведомление
 type Notification struct {
 	ID         string            `json:"id"`
 	CustomerID string            `json:"customer_id"`
@@ -45,7 +42,6 @@ type Notification struct {
 	UpdatedAt  time.Time         `json:"updated_at"`
 }
 
-// Request запрос на отправку уведомления
 type Request struct {
 	CustomerID string            `json:"customer_id"`
 	OrderID    string            `json:"order_id"`
@@ -56,7 +52,6 @@ type Request struct {
 	Metadata   map[string]string `json:"metadata,omitempty"`
 }
 
-// NewNotification создает новое уведомление
 func NewNotification(req *Request) *Notification {
 	return &Notification{
 		CustomerID: req.CustomerID,
@@ -72,17 +67,14 @@ func NewNotification(req *Request) *Notification {
 	}
 }
 
-// IsSent проверяет, отправлено ли уведомление
 func (n *Notification) IsSent() bool {
 	return n.Status == StatusSent
 }
 
-// IsFailed проверяет, провалилась ли отправка
 func (n *Notification) IsFailed() bool {
 	return n.Status == StatusFailed
 }
 
-// MarkAsSent помечает уведомление как отправленное
 func (n *Notification) MarkAsSent() {
 	n.Status = StatusSent
 	now := time.Now()
@@ -90,13 +82,11 @@ func (n *Notification) MarkAsSent() {
 	n.UpdatedAt = now
 }
 
-// MarkAsFailed помечает уведомление как неудачное
 func (n *Notification) MarkAsFailed() {
 	n.Status = StatusFailed
 	n.UpdatedAt = time.Now()
 }
 
-// Validate валидирует уведомление
 func (n *Notification) Validate() error {
 	if n.CustomerID == "" {
 		return NewValidationError("customer_id is required")

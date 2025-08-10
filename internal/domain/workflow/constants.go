@@ -2,34 +2,27 @@ package workflow
 
 import "time"
 
-// Temporal Workflow и Activity имена
 const (
-	// Workflow
 	OrderProcessingWorkflow = "OrderProcessingWorkflow"
 	
-	// Activities
 	CreateOrderActivity      = "CreateOrderActivity"
 	CheckInventoryActivity   = "CheckInventoryActivity"
 	ProcessPaymentActivity   = "ProcessPaymentActivity"
 	SendNotificationActivity = "SendNotificationActivity"
 	CancelOrderActivity      = "CancelOrderActivity"
 	
-	// Task Queue
 	OrderProcessingTaskQueue = "order-processing"
 )
 
-// Temporal Signals
 const (
 	CancelOrderSignal = "cancel-order"
 )
 
-// Temporal Queries
 const (
 	OrderStatusQuery   = "order-status"
 	WorkflowStateQuery = "workflow-state"
 )
 
-// Temporal настройки retry policy
 const (
 	DefaultMaximumAttempts    = 3
 	DefaultInitialInterval    = 1 * time.Second
@@ -37,7 +30,6 @@ const (
 	DefaultBackoffCoefficient = 2.0
 )
 
-// временные интервалы для симуляции
 const (
 	OrderCreationDuration     = 1 * time.Second
 	InventoryCheckDuration    = 2 * time.Second
@@ -45,7 +37,6 @@ const (
 	NotificationDuration      = 1 * time.Second
 )
 
-// WorkflowSteps представляет этапы workflow
 const (
 	StepCreateOrder      = "create_order"
 	StepCheckInventory   = "check_inventory"
@@ -56,7 +47,6 @@ const (
 	StepCancelled        = "cancelled"
 )
 
-// коды ошибок workflow
 const (
 	ErrorCodeValidation           = "VALIDATION_ERROR"
 	ErrorCodeInventoryUnavailable = "INVENTORY_UNAVAILABLE"

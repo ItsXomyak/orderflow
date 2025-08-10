@@ -17,7 +17,6 @@ type OrderPG struct {
 
 func NewOrderPG(pool *pgxpool.Pool) *OrderPG { return &OrderPG{pool: pool} }
 
-// Create: транзакция — вставить orders + order_items
 func (r *OrderPG) Create(ctx context.Context, o *order.Order) error {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {

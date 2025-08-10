@@ -191,13 +191,10 @@ func (s *OrderService) isValidStatusTransition(from, to order.Status) bool {
 			order.StatusCancelled,
 		},
 		order.StatusCompleted: {
-			// завершенный заказ нельзя изменить
 		},
 		order.StatusFailed: {
-			// неудачный заказ нельзя изменить
 		},
 		order.StatusCancelled: {
-			// отмененный заказ нельзя изменить
 		},
 	}
 

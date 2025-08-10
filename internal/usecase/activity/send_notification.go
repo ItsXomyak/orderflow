@@ -1,4 +1,3 @@
-// internal/usecase/activity/send_notification.go
 package activity
 
 import (
@@ -24,7 +23,6 @@ func NewSendNotificationActivity(notificationService notification.Service, order
 	}
 }
 
-// отправка уведомления
 func (a *SendNotificationActivity) Execute(ctx context.Context, input *workflow.SendNotificationActivityInput) error {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Starting SendNotificationActivity", 
@@ -32,7 +30,6 @@ func (a *SendNotificationActivity) Execute(ctx context.Context, input *workflow.
 		"customer_id", input.CustomerID,
 		"type", input.Type)
 
-	// валидация входных данных
 	if err := input.Validate(); err != nil {
 		logger.Error("Validation failed", "error", err)
 		return workflow.NewActivityError(
@@ -44,14 +41,12 @@ func (a *SendNotificationActivity) Execute(ctx context.Context, input *workflow.
 		)
 	}
 
-	// симуляция времени отправки уведомления
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-time.After(workflow.NotificationDuration):
 	}
 
-	// запрос на отправку уведомления
 	notificationReq := &notification.Request{
 		CustomerID: input.CustomerID,
 		OrderID:    input.OrderID,
@@ -63,16 +58,13 @@ func (a *SendNotificationActivity) Execute(ctx context.Context, input *workflow.
 		},
 	}
 
-	// Если сообщение не указано, генерируем стандартное
 	if notificationReq.Message == "" {
 		notificationReq.Message = a.generateDefaultMessage(input.Type, input.OrderID)
 	}
 
-	// отправка уведомления
 	if err := a.notificationService.Send(ctx, notificationReq); err != nil {
 		logger.Error("Failed to send notification", "error", err)
 		
-		//  можно ли повторить операцию
 		retryable := true
 		errorCode := workflow.ErrorCodeNotificationFailed
 		
@@ -101,7 +93,6 @@ func (a *SendNotificationActivity) Execute(ctx context.Context, input *workflow.
 	return nil
 }
 
-// отправка уведомления о подтверждении заказа
 func (a *SendNotificationActivity) SendOrderConfirmation(ctx context.Context, orderID, customerID, paymentID string) error {
 	input := &workflow.SendNotificationActivityInput{
 		CustomerID: customerID,
@@ -114,7 +105,6 @@ func (a *SendNotificationActivity) SendOrderConfirmation(ctx context.Context, or
 	return a.Execute(ctx, input)
 }
 
-// отправка уведомления о неудачном заказе
 func (a *SendNotificationActivity) SendOrderFailure(ctx context.Context, orderID, customerID, reason string) error {
 	input := &workflow.SendNotificationActivityInput{
 		CustomerID: customerID,
@@ -127,7 +117,6 @@ func (a *SendNotificationActivity) SendOrderFailure(ctx context.Context, orderID
 	return a.Execute(ctx, input)
 }
 
-// отправка уведомления об отмене заказа
 func (a *SendNotificationActivity) SendOrderCancellation(ctx context.Context, orderID, customerID string) error {
 	input := &workflow.SendNotificationActivityInput{
 		CustomerID: customerID,
@@ -140,7 +129,6 @@ func (a *SendNotificationActivity) SendOrderCancellation(ctx context.Context, or
 	return a.Execute(ctx, input)
 }
 
-// генерирует стандартное сообщение для типа уведомления
 func (a *SendNotificationActivity) generateDefaultMessage(notificationType notification.Type, orderID string) string {
 	switch notificationType {
 	case notification.TypeOrderConfirmed:
@@ -154,7 +142,6 @@ func (a *SendNotificationActivity) generateDefaultMessage(notificationType notif
 	}
 }
 
-// генерирует сообщение о подтверждении заказа
 func (a *SendNotificationActivity) generateOrderConfirmationMessage(orderID, paymentID string) string {
 	message := "Your order " + orderID + " has been successfully processed"
 	if paymentID != "" {
@@ -164,7 +151,6 @@ func (a *SendNotificationActivity) generateOrderConfirmationMessage(orderID, pay
 	return message
 }
 
-// генерирует сообщение о неудачном заказе
 func (a *SendNotificationActivity) generateOrderFailureMessage(orderID, reason string) string {
 	message := "Unfortunately, your order " + orderID + " could not be processed"
 	if reason != "" {
@@ -174,7 +160,6 @@ func (a *SendNotificationActivity) generateOrderFailureMessage(orderID, reason s
 	return message
 }
 
-// генерирует сообщение об отмене заказа
 func (a *SendNotificationActivity) generateOrderCancellationMessage(orderID string) string {
 	return "Your order " + orderID + " has been cancelled as requested. If you have any questions, please contact our support team."
 }

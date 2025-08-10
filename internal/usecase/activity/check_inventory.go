@@ -11,7 +11,6 @@ import (
 	"orderflow/internal/domain/workflow"
 )
 
-// чек наличия товаров на складе
 type CheckInventoryActivity struct {
 	inventoryService inventory.Service
 	orderService     order.Service
@@ -24,12 +23,10 @@ func NewCheckInventoryActivity(inventoryService inventory.Service, orderService 
 	}
 }
 
-// чек наличия товаров
 func (a *CheckInventoryActivity) Execute(ctx context.Context, input *workflow.CheckInventoryActivityInput) (*workflow.CheckInventoryActivityOutput, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Starting CheckInventoryActivity", "order_id", input.OrderID)
 
-	// валидация входных данных
 	if err := input.Validate(); err != nil {
 		logger.Error("Validation failed", "error", err)
 		return nil, workflow.NewActivityError(
@@ -41,20 +38,16 @@ func (a *CheckInventoryActivity) Execute(ctx context.Context, input *workflow.Ch
 		)
 	}
 
-	// апдейт статус заказа
 	if err := a.orderService.UpdateStatus(ctx, input.OrderID, order.StatusValidating); err != nil {
 		logger.Error("Failed to update order status", "error", err)
-		// продолжаем выполнение, это не критичная ошибка
 	}
 
-	// симуляция времени проверки склада
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	case <-time.After(workflow.InventoryCheckDuration):
 	}
 
-	// подготовка запроса для проверки склада
 	checkItems := make([]inventory.CheckItem, len(input.Items))
 	for i, item := range input.Items {
 		checkItems[i] = inventory.CheckItem{
@@ -68,15 +61,12 @@ func (a *CheckInventoryActivity) Execute(ctx context.Context, input *workflow.Ch
 		Items:   checkItems,
 	}
 
-	// проверка наличия товаров
 	checkResp, err := a.inventoryService.CheckAvailability(ctx, checkReq)
 	if err != nil {
 		logger.Error("Failed to check inventory", "error", err)
 		
-		// обновляем статус заказа при ошибке
 		a.orderService.SetFailure(ctx, input.OrderID, "Failed to check inventory: "+err.Error())
 		
-		// можно ли повторить операцию?
 		retryable := true
 		errorCode := workflow.ErrorCodeInternalError
 		
@@ -94,11 +84,9 @@ func (a *CheckInventoryActivity) Execute(ctx context.Context, input *workflow.Ch
 		)
 	}
 
-	// если товары недоступны
 	if !checkResp.Available {
 		logger.Warn("Inventory not available", "unavailable_items", checkResp.UnavailableItems)
 		
-		// апдейт статус заказа
 		a.orderService.SetFailure(ctx, input.OrderID, "Some items are not available")
 		
 		return &workflow.CheckInventoryActivityOutput{
@@ -107,7 +95,6 @@ func (a *CheckInventoryActivity) Execute(ctx context.Context, input *workflow.Ch
 		}, nil
 	}
 
-	// резерв товары
 	reserveItems := make([]inventory.ReserveItem, len(input.Items))
 	for i, item := range input.Items {
 		reserveItems[i] = inventory.ReserveItem{
@@ -143,7 +130,6 @@ func (a *CheckInventoryActivity) Execute(ctx context.Context, input *workflow.Ch
 	}, nil
 }
 
-// имя Activity для регистрации в Temporal
 func (a *CheckInventoryActivity) GetActivityName() string {
 	return workflow.CheckInventoryActivity
 }
