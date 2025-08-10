@@ -1,8 +1,59 @@
-version: '3'
+version: '3.8'
+
 services:
-  app:
-    container_name: "{$PROJECT_NAME}"
-    build: .
+  postgres:
+    image: postgres:16
+    container_name: temporal_postgres
     env_file:
       - .env
-    restart: always
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  temporal:
+    image: temporalio/server:latest
+    container_name: temporal_server
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${TEMPORAL_ADDRESS}:7233"
+    environment:
+      - DB=${TEMPORAL_DB}
+      - DB_PORT=${TEMPORAL_DB_PORT}
+      - POSTGRES_USER=${TEMPORAL_USER}
+      - POSTGRES_PWD=${TEMPORAL_PASSWORD}
+      - DBNAME=${TEMPORAL_DBNAME}
+      - VISIBILITY_DBNAME=${TEMPORAL_VISIBILITY_DBNAME}
+      - POSTGRES_VISIBILITY_USER=${TEMPORAL_VISIBILITY_USER}
+      - POSTGRES_VISIBILITY_PWD=${TEMPORAL_VISIBILITY_PASSWORD}
+      - TEMPORAL_ADDRESS=${TEMPORAL_GRPC_ADDRESS}
+    volumes:
+      - ./temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
+    restart: unless-stopped
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    container_name: temporal_ui
+    env_file:
+      - .env
+    depends_on:
+      - temporal
+    ports:
+      - "${TEMPORAL_UI_PORT}:8080"
+    environment:
+      - TEMPORAL_ADDRESS=${TEMPORAL_GRPC_ADDRESS}
+      - TEMPORAL_UI_ENABLED=${TEMPORAL_UI_ENABLED}
+    restart: unless-stopped
+
+volumes:
+  pgdata:

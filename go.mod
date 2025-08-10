@@ -1,4 +1,4 @@
-module github.com/skantay/rest-template
+module orderflow
 
 go 1.21.0
 

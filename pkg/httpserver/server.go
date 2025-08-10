@@ -1,10 +1,11 @@
-package httpserver
+package httpserver 
 
 import (
 	"context"
 	"net/http"
 	"time"
 )
+
 
 // Значения по умолчнию для сервера
 const (
