@@ -37,7 +37,7 @@ const (
 	DefaultBackoffCoefficient = 2.0
 )
 
-// Временные интервалы для симуляции
+// временные интервалы для симуляции
 const (
 	OrderCreationDuration     = 1 * time.Second
 	InventoryCheckDuration    = 2 * time.Second
@@ -56,7 +56,7 @@ const (
 	StepCancelled        = "cancelled"
 )
 
-// Коды ошибок workflow
+// коды ошибок workflow
 const (
 	ErrorCodeValidation           = "VALIDATION_ERROR"
 	ErrorCodeInventoryUnavailable = "INVENTORY_UNAVAILABLE"

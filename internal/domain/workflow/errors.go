@@ -2,7 +2,7 @@ package workflow
 
 import "fmt"
 
-// ValidationError ошибка валидации входных данных workflow
+// ошибка валидации входных данных workflow
 type ValidationError struct {
 	Message string
 }
@@ -15,7 +15,7 @@ func NewValidationError(message string) *ValidationError {
 	return &ValidationError{Message: message}
 }
 
-// ActivityError ошибка выполнения Activity
+// ошибка выполнения Activity
 type ActivityError struct {
 	ActivityName string
 	Step         string
@@ -43,7 +43,7 @@ func NewActivityError(activityName, step, code, message string, retryable bool) 
 	}
 }
 
-// CancellationError ошибка отмены workflow
+// ошибка отмены workflow
 type CancellationError struct {
 	OrderID string
 	Reason  string
@@ -57,7 +57,7 @@ func NewCancellationError(orderID, reason string) *CancellationError {
 	return &CancellationError{OrderID: orderID, Reason: reason}
 }
 
-// TimeoutError ошибка таймаута workflow
+// ошибка таймаута workflow
 type TimeoutError struct {
 	Step    string
 	Timeout string
@@ -71,7 +71,7 @@ func NewTimeoutError(step, timeout string) *TimeoutError {
 	return &TimeoutError{Step: step, Timeout: timeout}
 }
 
-// RetryExhaustedError ошибка исчерпания попыток повтора
+// ошибка исчерпания попыток повтора
 type RetryExhaustedError struct {
 	ActivityName string
 	MaxAttempts  int
