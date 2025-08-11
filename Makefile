@@ -22,13 +22,28 @@ clean: ## Очистить бинарные файлы
 	rm -rf bin/
 
 docker-up: ## Запустить инфраструктуру (PostgreSQL + Temporal)
-	docker-compose -f $(DOCKER_COMPOSE_FILE) up -d
+	docker-compose -f $(DOCKER_COMPOSE_FILE) up -d postgres temporal temporal-web
 
 docker-down: ## Остановить инфраструктуру
 	docker-compose -f $(DOCKER_COMPOSE_FILE) down
 
 docker-logs: ## Показать логи контейнеров
 	docker-compose -f $(DOCKER_COMPOSE_FILE) logs -f
+
+docker-build: ## Собрать Docker образ приложения
+	docker-compose -f $(DOCKER_COMPOSE_FILE) build app
+
+docker-run: ## Запустить полную систему (инфраструктура + приложение)
+	docker-compose -f $(DOCKER_COMPOSE_FILE) up -d
+
+docker-stop: ## Остановить все контейнеры
+	docker-compose -f $(DOCKER_COMPOSE_FILE) down
+
+docker-restart: ## Перезапустить все контейнеры
+	docker-compose -f $(DOCKER_COMPOSE_FILE) restart
+
+docker-clean: ## Остановить и удалить все контейнеры и volumes
+	docker-compose -f $(DOCKER_COMPOSE_FILE) down -v --remove-orphans
 
 migrate: ## Применить миграции
 	@echo "Миграции применяются автоматически при запуске PostgreSQL"

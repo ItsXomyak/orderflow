@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -21,11 +22,25 @@ import (
 )
 
 func main() {
-	logger.Init("development")
+	// Получение переменных окружения
+	appEnv := getEnv("APP_ENV", "development")
+	postgresHost := getEnv("POSTGRES_HOST", "localhost")
+	postgresPort := getEnv("POSTGRES_PORT", "5432")
+	postgresDB := getEnv("POSTGRES_DB", "orderflow")
+	postgresUser := getEnv("POSTGRES_USER", "postgres")
+	postgresPassword := getEnv("POSTGRES_PASSWORD", "password")
+	temporalHost := getEnv("TEMPORAL_HOST", "localhost")
+	temporalPort := getEnv("TEMPORAL_PORT", "7233")
+
+	logger.Init(appEnv)
 
 	logger.Info("Starting OrderFlow application...")
 
-	pool, err := pgxpool.New(context.Background(), "postgres://postgres:password@localhost:5432/orderflow?sslmode=disable")
+	// Формирование строки подключения к PostgreSQL
+	postgresURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		postgresUser, postgresPassword, postgresHost, postgresPort, postgresDB)
+
+	pool, err := pgxpool.New(context.Background(), postgresURL)
 	if err != nil {
 		logger.Error("Failed to connect to PostgreSQL", "error", err)
 		os.Exit(1)
@@ -48,8 +63,11 @@ func main() {
 	sendNotificationActivity := activity.NewSendNotificationActivity(notificationService, orderService)
 	cancelOrderActivity := activity.NewCancelOrderActivity(orderService, paymentService, inventoryService)
 
+	// Формирование адреса Temporal
+	temporalURL := fmt.Sprintf("%s:%s", temporalHost, temporalPort)
+
 	temporalClient, err := client.NewClient(client.Options{
-		HostPort: "localhost:7233", // Temporal Server адрес
+		HostPort: temporalURL,
 	})
 	if err != nil {
 		logger.Error("Failed to create Temporal client", "error", err)
@@ -117,4 +135,12 @@ func getWorkflowStatus(temporalClient client.Client, workflowID string) (interfa
 	var result interface{}
 	_, err := temporalClient.QueryWorkflow(context.Background(), workflowID, "", workflow.OrderStatusQuery, &result)
 	return result, err
+}
+
+// getEnv получает переменную окружения или возвращает значение по умолчанию
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }
