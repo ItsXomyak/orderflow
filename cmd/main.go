@@ -22,15 +22,12 @@ import (
 )
 
 func main() {
-	// Получение переменных окружения
 	appEnv := getEnv("APP_ENV", "development")
 	postgresHost := getEnv("POSTGRES_HOST", "localhost")
 	postgresPort := getEnv("POSTGRES_PORT", "5432")
 	postgresDB := getEnv("POSTGRES_DB", "orderflow")
 	postgresUser := getEnv("POSTGRES_USER", "postgres")
 	postgresPassword := getEnv("POSTGRES_PASSWORD", "password")
-	temporalHost := getEnv("TEMPORAL_HOST", "localhost")
-	temporalPort := getEnv("TEMPORAL_PORT", "7233")
 
 	logger.Init(appEnv)
 
@@ -63,17 +60,12 @@ func main() {
 	sendNotificationActivity := activity.NewSendNotificationActivity(notificationService, orderService)
 	cancelOrderActivity := activity.NewCancelOrderActivity(orderService, paymentService, inventoryService)
 
-	// Формирование адреса Temporal
-	temporalURL := fmt.Sprintf("%s:%s", temporalHost, temporalPort)
-
-	temporalClient, err := client.NewClient(client.Options{
-		HostPort: temporalURL,
-	})
+	temporalClient, err := newTemporalClient()
 	if err != nil {
-		logger.Error("Failed to create Temporal client", "error", err)
-		os.Exit(1)
-	}
-	defer temporalClient.Close()
+	logger.Error("Failed to create Temporal client", "error", err)
+	os.Exit(1)
+}
+defer temporalClient.Close()
 
 	w := worker.New(temporalClient, workflow.OrderProcessingTaskQueue, worker.Options{})
 
@@ -135,6 +127,31 @@ func getWorkflowStatus(temporalClient client.Client, workflowID string) (interfa
 	var result interface{}
 	_, err := temporalClient.QueryWorkflow(context.Background(), workflowID, "", workflow.OrderStatusQuery, &result)
 	return result, err
+}
+
+func newTemporalClient() (client.Client, error) {
+	// приоритет: TEMPORAL_ADDRESS > (TEMPORAL_HOST + TEMPORAL_PORT)
+	addr := getEnv("TEMPORAL_ADDRESS", "TEMPORAL_HOST:TEMPORAL_PORT")
+	if addr == "" {
+		host := getEnv("TEMPORAL_HOST", "temporal") // имя сервиса из docker-compose
+		port := getEnv("TEMPORAL_PORT", "7233")
+		addr = fmt.Sprintf("%s:%s", host, port)
+	}
+
+	// ретраи на случай, если сервер ещё не готов
+	var c client.Client
+	var err error
+	for attempt := 0; attempt < 8; attempt++ {
+		c, err = client.Dial(client.Options{
+			HostPort:  addr,
+			Namespace: getEnv("TEMPORAL_NAMESPACE", "default"),
+		})
+		if err == nil {
+			return c, nil
+		}
+		time.Sleep(time.Second * time.Duration(1<<attempt)) // 1s,2s,4s,...
+	}
+	return nil, err
 }
 
 // getEnv получает переменную окружения или возвращает значение по умолчанию
