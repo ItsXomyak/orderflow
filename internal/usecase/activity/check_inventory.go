@@ -8,7 +8,7 @@ import (
 
 	"orderflow/internal/domain/inventory"
 	"orderflow/internal/domain/order"
-	"orderflow/internal/domain/workflow"
+	wf "orderflow/internal/domain/workflow"
 )
 
 type CheckInventoryActivity struct {
@@ -23,16 +23,16 @@ func NewCheckInventoryActivity(inventoryService inventory.Service, orderService 
 	}
 }
 
-func (a *CheckInventoryActivity) Execute(ctx context.Context, input *workflow.CheckInventoryActivityInput) (*workflow.CheckInventoryActivityOutput, error) {
+func (a *CheckInventoryActivity) Execute(ctx context.Context, input *wf.CheckInventoryActivityInput) (*wf.CheckInventoryActivityOutput, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Starting CheckInventoryActivity", "order_id", input.OrderID)
 
 	if err := input.Validate(); err != nil {
 		logger.Error("Validation failed", "error", err)
-		return nil, workflow.NewActivityError(
-			workflow.CheckInventoryActivity,
-			workflow.StepCheckInventory,
-			workflow.ErrorCodeValidation,
+		return nil, wf.NewActivityError(
+			wf.CheckInventoryActivity,
+			wf.StepCheckInventory,
+			wf.ErrorCodeValidation,
 			err.Error(),
 			false,
 		)
@@ -45,7 +45,7 @@ func (a *CheckInventoryActivity) Execute(ctx context.Context, input *workflow.Ch
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
-	case <-time.After(workflow.InventoryCheckDuration):
+	case <-time.After(wf.InventoryCheckDuration):
 	}
 
 	checkItems := make([]inventory.CheckItem, len(input.Items))
@@ -68,16 +68,16 @@ func (a *CheckInventoryActivity) Execute(ctx context.Context, input *workflow.Ch
 		a.orderService.SetFailure(ctx, input.OrderID, "Failed to check inventory: "+err.Error())
 		
 		retryable := true
-		errorCode := workflow.ErrorCodeInternalError
+		errorCode := wf.ErrorCodeInternalError
 		
 		switch err.(type) {
 		case *inventory.ProductNotFoundError:
 			retryable = false
 		}
 		
-		return nil, workflow.NewActivityError(
-			workflow.CheckInventoryActivity,
-			workflow.StepCheckInventory,
+		return nil, wf.NewActivityError(
+			wf.CheckInventoryActivity,
+			wf.StepCheckInventory,
 			errorCode,
 			err.Error(),
 			retryable,
@@ -89,7 +89,7 @@ func (a *CheckInventoryActivity) Execute(ctx context.Context, input *workflow.Ch
 		
 		a.orderService.SetFailure(ctx, input.OrderID, "Some items are not available")
 		
-		return &workflow.CheckInventoryActivityOutput{
+		return &wf.CheckInventoryActivityOutput{
 			Available:        false,
 			UnavailableItems: checkResp.UnavailableItems,
 		}, nil
@@ -113,10 +113,10 @@ func (a *CheckInventoryActivity) Execute(ctx context.Context, input *workflow.Ch
 		
 		a.orderService.SetFailure(ctx, input.OrderID, "Failed to reserve items: "+err.Error())
 		
-		return nil, workflow.NewActivityError(
-			workflow.CheckInventoryActivity,
-			workflow.StepCheckInventory,
-			workflow.ErrorCodeInventoryUnavailable,
+		return nil, wf.NewActivityError(
+			wf.CheckInventoryActivity,
+			wf.StepCheckInventory,
+			wf.ErrorCodeInventoryUnavailable,
 			err.Error(),
 			true,
 		)
@@ -124,12 +124,12 @@ func (a *CheckInventoryActivity) Execute(ctx context.Context, input *workflow.Ch
 
 	logger.Info("Inventory checked and items reserved successfully", "order_id", input.OrderID)
 
-	return &workflow.CheckInventoryActivityOutput{
+	return &wf.CheckInventoryActivityOutput{
 		Available:        true,
 		UnavailableItems: nil,
 	}, nil
 }
 
-func (a *CheckInventoryActivity) GetActivityName() string {
-	return workflow.CheckInventoryActivity
+func (a *CheckInventoryActivity) GetActivityName() (string, error) {
+	return wf.CheckInventoryActivity, nil
 }

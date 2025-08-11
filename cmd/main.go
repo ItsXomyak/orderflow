@@ -19,8 +19,8 @@ import (
 	"orderflow/internal/httpserver"
 	activ "orderflow/internal/usecase/activity"
 	"orderflow/internal/usecase/service"
-	"orderflow/pkg/logger"
 	usecaseWorkflow "orderflow/internal/usecase/workflow"
+	"orderflow/pkg/logger"
 )
 
 func main() {
@@ -35,7 +35,6 @@ func main() {
 
 	logger.Info("Starting OrderFlow application...")
 
-	// Формирование строки подключения к PostgreSQL
 	postgresURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		postgresUser, postgresPassword, postgresHost, postgresPort, postgresDB)
 
@@ -71,25 +70,20 @@ defer temporalClient.Close()
 
 w := worker.New(temporalClient, workflow.OrderProcessingTaskQueue, worker.Options{})
 
-// Регистрируем активити с кастомными именами
 w.RegisterActivityWithOptions(createOrderActivity.Execute, activity.RegisterOptions{
-    Name: "create_order_v1",
+    Name: "CreateOrderActivity",
 })
-
 w.RegisterActivityWithOptions(checkInventoryActivity.Execute, activity.RegisterOptions{
-    Name: "check_inventory_v1",
+    Name: "CheckInventoryActivity",
 })
-
 w.RegisterActivityWithOptions(processPaymentActivity.Execute, activity.RegisterOptions{
-    Name: "process_payment_v1",
+    Name: "ProcessPaymentActivity",
 })
-
 w.RegisterActivityWithOptions(sendNotificationActivity.Execute, activity.RegisterOptions{
-    Name: "send_notification_v1",
+    Name: "SendNotificationActivity",
 })
-
 w.RegisterActivityWithOptions(cancelOrderActivity.Execute, activity.RegisterOptions{
-    Name: "cancel_order_v1",
+    Name: "CancelOrderActivity",
 })
 
 w.RegisterWorkflow(usecaseWorkflow.OrderProcessingWorkflow)
@@ -146,7 +140,6 @@ func getWorkflowStatus(temporalClient client.Client, workflowID string) (interfa
 }
 
 func newTemporalClient() (client.Client, error) {
-	// приоритет: TEMPORAL_ADDRESS > (TEMPORAL_HOST + TEMPORAL_PORT)
 	addr := getEnv("TEMPORAL_ADDRESS", "TEMPORAL_HOST:TEMPORAL_PORT")
 	if addr == "" {
 		host := getEnv("TEMPORAL_HOST", "temporal") // имя сервиса из docker-compose
@@ -154,7 +147,6 @@ func newTemporalClient() (client.Client, error) {
 		addr = fmt.Sprintf("%s:%s", host, port)
 	}
 
-	// ретраи на случай, если сервер ещё не готов
 	var c client.Client
 	var err error
 	for attempt := 0; attempt < 8; attempt++ {
@@ -170,7 +162,6 @@ func newTemporalClient() (client.Client, error) {
 	return nil, err
 }
 
-// getEnv получает переменную окружения или возвращает значение по умолчанию
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value

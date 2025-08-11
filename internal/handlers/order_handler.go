@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"go.temporal.io/sdk/client"
 
@@ -66,7 +67,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	workflowOptions := client.StartWorkflowOptions{
-		ID:        "order-processing-" + req.CustomerID + "-" + strconv.FormatInt(r.Context().Value("timestamp").(int64), 10),
+		ID:        "order-processing-" + req.CustomerID + "-" + strconv.FormatInt(time.Now().Unix(), 10),
 		TaskQueue: workflow.OrderProcessingTaskQueue,
 	}
 

@@ -7,7 +7,7 @@ import (
 	"orderflow/internal/domain/inventory"
 	"orderflow/internal/domain/order"
 	"orderflow/internal/domain/payment"
-	"orderflow/internal/domain/workflow"
+	wf "orderflow/internal/domain/workflow"
 	"orderflow/pkg/logger"
 )
 
@@ -21,15 +21,15 @@ func NewProcessPaymentActivity(paymenyService payment.Service, orderService orde
 	return &ProcessPaymentActivity{paymenyService: paymenyService, orderService: orderService, inventoryService: inventoryService}
 }
 
-func (a *ProcessPaymentActivity) Execute(ctx context.Context, input *workflow.ProcessPaymentActivityInput) (*workflow.ProcessPaymentActivityOutput, error) {
+func (a *ProcessPaymentActivity) Execute(ctx context.Context, input *wf.ProcessPaymentActivityInput) (*wf.ProcessPaymentActivityOutput, error) {
 	logger.Info("Starting ProcessPaymentActivity", "order_id", input.OrderID)
 
 	if err := input.Validate(); err != nil {
 		logger.Error("ProcessPaymentActivity validation error", "error", err)
-		return nil, workflow.NewActivityError(
-			workflow.ProcessPaymentActivity,
-			workflow.StepProcessPayment,
-			workflow.ErrorCodeValidation,
+		return nil, wf.NewActivityError(
+			wf.ProcessPaymentActivity,
+			wf.StepProcessPayment,
+			wf.ErrorCodeValidation,
 			err.Error(),
 			false, // не ретраить в таком случае
 		)
@@ -42,7 +42,7 @@ func (a *ProcessPaymentActivity) Execute(ctx context.Context, input *workflow.Pr
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
-	case <-time.After(workflow.PaymentProcessDuration):
+	case <-time.After(wf.PaymentProcessDuration):
 	}
 
 	paymentReq := &payment.Request{
@@ -63,19 +63,19 @@ func (a *ProcessPaymentActivity) Execute(ctx context.Context, input *workflow.Pr
 		a.orderService.SetFailure(ctx, input.OrderID, "Payment failed"+ err.Error())
 
 		retryable := true
-		errorCode := workflow.ErrorCodePaymentFailed
+		errorCode := wf.ErrorCodePaymentFailed
 
 		switch err.(type) {
 		case *payment.ValidationError:
-			errorCode = workflow.ErrorCodeValidation
+			errorCode = wf.ErrorCodeValidation
 			retryable = false
 		case *payment.InsufficientFundsError: 
 		retryable = false
 		}
 
-		return nil, workflow.NewActivityError(
-			workflow.ProcessPaymentActivity,
-			workflow.StepProcessPayment,
+		return nil, wf.NewActivityError(
+			wf.ProcessPaymentActivity,
+			wf.StepProcessPayment,
 			errorCode,
 			err.Error(),
 			retryable,
@@ -91,10 +91,10 @@ func (a *ProcessPaymentActivity) Execute(ctx context.Context, input *workflow.Pr
 		
 		a.orderService.SetFailure(ctx, input.OrderID, paymentResp.ErrorMessage)
 		
-		return nil, workflow.NewActivityError(
-			workflow.ProcessPaymentActivity,
-			workflow.StepProcessPayment,
-			workflow.ErrorCodePaymentFailed,
+		return nil, wf.NewActivityError(
+			wf.ProcessPaymentActivity,
+			wf.StepProcessPayment,
+			wf.ErrorCodePaymentFailed,
 			paymentResp.ErrorMessage,
 			false, // обычно ошибки платежа не ретраим автоматически
 		)
@@ -103,10 +103,10 @@ func (a *ProcessPaymentActivity) Execute(ctx context.Context, input *workflow.Pr
 	if err := a.inventoryService.ConfirmReservation(ctx, input.OrderID); err != nil {
 		logger.Error("Failed to confirm reservation", "error", err)
 		
-		return nil, workflow.NewActivityError(
-			workflow.ProcessPaymentActivity,
-			workflow.StepProcessPayment,
-			workflow.ErrorCodeInternalError,
+		return nil, wf.NewActivityError(
+			wf.ProcessPaymentActivity,
+			wf.StepProcessPayment,
+			wf.ErrorCodeInternalError,
 			"Failed to confirm reservation after successful payment: "+err.Error(),
 			true,
 		)
@@ -117,13 +117,13 @@ func (a *ProcessPaymentActivity) Execute(ctx context.Context, input *workflow.Pr
 		"payment_id", paymentResp.PaymentID,
 		"transaction_id", paymentResp.TransactionID)
 
-	return &workflow.ProcessPaymentActivityOutput{
+	return &wf.ProcessPaymentActivityOutput{
 		PaymentID:     paymentResp.PaymentID,
 		TransactionID: paymentResp.TransactionID,
 	}, nil
 }
 
 
-func (a *ProcessPaymentActivity) GetActivityName() string {
-	return workflow.ProcessPaymentActivity
+func (a *ProcessPaymentActivity) GetActivityName() (string, error) {
+	return wf.ProcessPaymentActivity, nil
 }

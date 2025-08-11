@@ -8,7 +8,7 @@ import (
 
 	"orderflow/internal/domain/notification"
 	"orderflow/internal/domain/order"
-	"orderflow/internal/domain/workflow"
+	wf "orderflow/internal/domain/workflow"
 )
 
 type SendNotificationActivity struct {
@@ -23,7 +23,7 @@ func NewSendNotificationActivity(notificationService notification.Service, order
 	}
 }
 
-func (a *SendNotificationActivity) Execute(ctx context.Context, input *workflow.SendNotificationActivityInput) error {
+func (a *SendNotificationActivity) Execute(ctx context.Context, input *wf.SendNotificationActivityInput) error {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Starting SendNotificationActivity", 
 		"order_id", input.OrderID, 
@@ -32,10 +32,10 @@ func (a *SendNotificationActivity) Execute(ctx context.Context, input *workflow.
 
 	if err := input.Validate(); err != nil {
 		logger.Error("Validation failed", "error", err)
-		return workflow.NewActivityError(
-			workflow.SendNotificationActivity,
-			workflow.StepSendNotification,
-			workflow.ErrorCodeValidation,
+		return wf.NewActivityError(
+			wf.SendNotificationActivity,
+			wf.StepSendNotification,
+			wf.ErrorCodeValidation,
 			err.Error(),
 			false,
 		)
@@ -44,7 +44,7 @@ func (a *SendNotificationActivity) Execute(ctx context.Context, input *workflow.
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case <-time.After(workflow.NotificationDuration):
+	case <-time.After(wf.NotificationDuration):
 	}
 
 	notificationReq := &notification.Request{
@@ -66,19 +66,19 @@ func (a *SendNotificationActivity) Execute(ctx context.Context, input *workflow.
 		logger.Error("Failed to send notification", "error", err)
 		
 		retryable := true
-		errorCode := workflow.ErrorCodeNotificationFailed
+		errorCode := wf.ErrorCodeNotificationFailed
 		
 		switch err.(type) {
 		case *notification.ValidationError:
 			retryable = false
-			errorCode = workflow.ErrorCodeValidation
+			errorCode = wf.ErrorCodeValidation
 		case *notification.UnsupportedChannelError:
 			retryable = false
 		}
 		
-		return workflow.NewActivityError(
-			workflow.SendNotificationActivity,
-			workflow.StepSendNotification,
+		return wf.NewActivityError(
+			wf.SendNotificationActivity,
+			wf.StepSendNotification,
 			errorCode,
 			err.Error(),
 			retryable,
@@ -94,7 +94,7 @@ func (a *SendNotificationActivity) Execute(ctx context.Context, input *workflow.
 }
 
 func (a *SendNotificationActivity) SendOrderConfirmation(ctx context.Context, orderID, customerID, paymentID string) error {
-	input := &workflow.SendNotificationActivityInput{
+	input := &wf.SendNotificationActivityInput{
 		CustomerID: customerID,
 		OrderID:    orderID,
 		Type:       notification.TypeOrderConfirmed,
@@ -106,7 +106,7 @@ func (a *SendNotificationActivity) SendOrderConfirmation(ctx context.Context, or
 }
 
 func (a *SendNotificationActivity) SendOrderFailure(ctx context.Context, orderID, customerID, reason string) error {
-	input := &workflow.SendNotificationActivityInput{
+	input := &wf.SendNotificationActivityInput{
 		CustomerID: customerID,
 		OrderID:    orderID,
 		Type:       notification.TypeOrderFailed,
@@ -118,7 +118,7 @@ func (a *SendNotificationActivity) SendOrderFailure(ctx context.Context, orderID
 }
 
 func (a *SendNotificationActivity) SendOrderCancellation(ctx context.Context, orderID, customerID string) error {
-	input := &workflow.SendNotificationActivityInput{
+	input := &wf.SendNotificationActivityInput{
 		CustomerID: customerID,
 		OrderID:    orderID,
 		Type:       notification.TypeOrderCancelled,
@@ -164,6 +164,6 @@ func (a *SendNotificationActivity) generateOrderCancellationMessage(orderID stri
 	return "Your order " + orderID + " has been cancelled as requested. If you have any questions, please contact our support team."
 }
 
-func (a *SendNotificationActivity) GetActivityName() string {
-	return workflow.SendNotificationActivity
+func (a *SendNotificationActivity) GetActivityName() (string, error) {
+	return wf.SendNotificationActivity, nil
 }

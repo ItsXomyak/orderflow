@@ -57,6 +57,6 @@ func (a *CreateOrderActivity) Execute(ctx context.Context, in *wf.CreateOrderAct
 	return &wf.CreateOrderActivityOutput{OrderID: o.ID}, nil
 }
 
-func (a *CreateOrderActivity) GetActivityName() string {
-	return wf.CreateOrderActivity
+func (a *CreateOrderActivity) GetActivityName() (string, error) {
+	return wf.CreateOrderActivity, nil
 }

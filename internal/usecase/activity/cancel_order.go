@@ -8,7 +8,7 @@ import (
 	"orderflow/internal/domain/inventory"
 	"orderflow/internal/domain/order"
 	"orderflow/internal/domain/payment"
-	"orderflow/internal/domain/workflow"
+	wf "orderflow/internal/domain/workflow"
 )
 
 type CancelOrderActivityInput struct {
@@ -43,10 +43,10 @@ func (a *CancelOrderActivity) Execute(ctx context.Context, input *CancelOrderAct
 		"reason", input.Reason)
 
 	if input.OrderID == "" {
-		return workflow.NewActivityError(
-			workflow.CancelOrderActivity,
-			workflow.StepCancelled,
-			workflow.ErrorCodeValidation,
+		return wf.NewActivityError(
+			wf.CancelOrderActivity,
+			wf.StepCancelled,
+			wf.ErrorCodeValidation,
 			"order_id is required",
 			false,
 		)
@@ -56,14 +56,14 @@ func (a *CancelOrderActivity) Execute(ctx context.Context, input *CancelOrderAct
 	if err != nil {
 		logger.Error("Failed to get order", "error", err)
 		
-		errorCode := workflow.ErrorCodeInternalError
+		errorCode := wf.ErrorCodeInternalError
 		if _, ok := err.(*order.NotFoundError); ok {
-			errorCode = workflow.ErrorCodeOrderNotFound
+			errorCode = wf.ErrorCodeOrderNotFound
 		}
 		
-		return workflow.NewActivityError(
-			workflow.CancelOrderActivity,
-			workflow.StepCancelled,
+		return wf.NewActivityError(
+			wf.CancelOrderActivity,
+			wf.StepCancelled,
 			errorCode,
 			err.Error(),
 			false,
@@ -72,10 +72,10 @@ func (a *CancelOrderActivity) Execute(ctx context.Context, input *CancelOrderAct
 
 	if !orderEntity.CanBeCancelled() {
 		logger.Warn("Cannot cancel order", "order_status", orderEntity.Status)
-		return workflow.NewActivityError(
-			workflow.CancelOrderActivity,
-			workflow.StepCancelled,
-			workflow.ErrorCodeOrderCancelled,
+		return wf.NewActivityError(
+			wf.CancelOrderActivity,
+			wf.StepCancelled,
+			wf.ErrorCodeOrderCancelled,
 			"Order cannot be cancelled in current status: "+string(orderEntity.Status),
 			false,
 		)
@@ -105,10 +105,10 @@ func (a *CancelOrderActivity) Execute(ctx context.Context, input *CancelOrderAct
 	
 	if err := a.orderService.Cancel(ctx, input.OrderID); err != nil {
 		logger.Error("Failed to cancel order", "error", err)
-		return workflow.NewActivityError(
-			workflow.CancelOrderActivity,
-			workflow.StepCancelled,
-			workflow.ErrorCodeInternalError,
+		return wf.NewActivityError(
+			wf.CancelOrderActivity,
+			wf.StepCancelled,
+			wf.ErrorCodeInternalError,
 			"Failed to update order status: "+err.Error(),
 			true,
 		)
@@ -118,6 +118,6 @@ func (a *CancelOrderActivity) Execute(ctx context.Context, input *CancelOrderAct
 	return nil
 }
 
-func (a *CancelOrderActivity) GetActivityName() string {
-	return workflow.CancelOrderActivity
+func (a *CancelOrderActivity) GetActivityName() (string, error) {
+	return wf.CancelOrderActivity, nil
 }
