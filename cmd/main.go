@@ -19,7 +19,7 @@ import (
 	"orderflow/internal/httpserver"
 	activ "orderflow/internal/usecase/activity"
 	"orderflow/internal/usecase/service"
-	"orderflow/pkg/logger"ф
+	"orderflow/pkg/logger"
 	usecaseWorkflow "orderflow/internal/usecase/workflow"
 )
 
