@@ -10,15 +10,17 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 
 	"orderflow/internal/adapter/repository"
 	"orderflow/internal/domain/workflow"
 	"orderflow/internal/httpserver"
-	"orderflow/internal/usecase/activity"
+	activ "orderflow/internal/usecase/activity"
 	"orderflow/internal/usecase/service"
-	"orderflow/pkg/logger"
+	"orderflow/pkg/logger"ф
+	usecaseWorkflow "orderflow/internal/usecase/workflow"
 )
 
 func main() {
@@ -54,11 +56,11 @@ func main() {
 	paymentService := service.NewPaymentService(paymentRepo)
 	notificationService := service.NewNotificationService(notificationRepo)
 
-	createOrderActivity := activity.NewCreateOrderActivity(orderService)
-	checkInventoryActivity := activity.NewCheckInventoryActivity(inventoryService, orderService)
-	processPaymentActivity := activity.NewProcessPaymentActivity(paymentService, orderService, inventoryService)
-	sendNotificationActivity := activity.NewSendNotificationActivity(notificationService, orderService)
-	cancelOrderActivity := activity.NewCancelOrderActivity(orderService, paymentService, inventoryService)
+	createOrderActivity := activ.NewCreateOrderActivity(orderService)
+	checkInventoryActivity := activ.NewCheckInventoryActivity(inventoryService, orderService)
+	processPaymentActivity := activ.NewProcessPaymentActivity(paymentService, orderService, inventoryService)
+	sendNotificationActivity := activ.NewSendNotificationActivity(notificationService, orderService)
+	cancelOrderActivity := activ.NewCancelOrderActivity(orderService, paymentService, inventoryService)
 
 	temporalClient, err := newTemporalClient()
 	if err != nil {
@@ -67,18 +69,32 @@ func main() {
 }
 defer temporalClient.Close()
 
-	w := worker.New(temporalClient, workflow.OrderProcessingTaskQueue, worker.Options{})
+w := worker.New(temporalClient, workflow.OrderProcessingTaskQueue, worker.Options{})
 
-	w.RegisterActivity(createOrderActivity.Execute)
-	w.RegisterActivity(checkInventoryActivity.Execute)
-	w.RegisterActivity(processPaymentActivity.Execute)
-	w.RegisterActivity(sendNotificationActivity.Execute)
-	w.RegisterActivity(cancelOrderActivity.Execute)
+// Регистрируем активити с кастомными именами
+w.RegisterActivityWithOptions(createOrderActivity.Execute, activity.RegisterOptions{
+    Name: "create_order_v1",
+})
 
-	w.RegisterWorkflow(workflow.OrderProcessingWorkflow)
+w.RegisterActivityWithOptions(checkInventoryActivity.Execute, activity.RegisterOptions{
+    Name: "check_inventory_v1",
+})
 
-	httpServer := httpserver.NewServer(8080, temporalClient)
+w.RegisterActivityWithOptions(processPaymentActivity.Execute, activity.RegisterOptions{
+    Name: "process_payment_v1",
+})
 
+w.RegisterActivityWithOptions(sendNotificationActivity.Execute, activity.RegisterOptions{
+    Name: "send_notification_v1",
+})
+
+w.RegisterActivityWithOptions(cancelOrderActivity.Execute, activity.RegisterOptions{
+    Name: "cancel_order_v1",
+})
+
+w.RegisterWorkflow(usecaseWorkflow.OrderProcessingWorkflow)
+
+httpServer := httpserver.NewServer(8080, temporalClient)
 	go func() {
 		logger.Info("Starting Temporal Worker...")
 		if err := w.Run(worker.InterruptCh()); err != nil {

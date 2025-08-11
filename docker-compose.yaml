@@ -72,6 +72,7 @@ services:
       - TEMPORAL_HOST=${TEMPORAL_HOST}
       - TEMPORAL_PORT=${TEMPORAL_PORT}
       - APP_ENV=${APP_ENV}
+      - TEMPORAL_ADDRESS=temporal:7233
     ports:
       - '${APP_PORT}:8080'
     depends_on:
